@@ -20,8 +20,15 @@ class NbpApi {
     public $dir;
     public $json;
 
+    /*
+     * TODO:
+     * - Fetching old directories (change of 1 July 2015)
+     *
+     */
     private $_urls = array(
         'dir' => 'http://www.nbp.pl/kursy/xml/dir.txt',
+        'dirY' => 'http://www.nbp.pl/kursy/xml/dir[date].txt',
+        'lastA' => 'http://www.nbp.pl/kursy/xml/LastA.xml',
         'xml' => 'http://www.nbp.pl/kursy/xml/'
     );
 
@@ -30,10 +37,16 @@ class NbpApi {
         return $file;
     }
 
-    private function _getDir() {
+    /**
+     *
+     */private function _getDir() {
         $this->dir = $this->_getFile($this->_urls['dir']);
     }
 
+    /**
+     * @param null $date
+     * @return bool
+     */
     private function _getXml($date = null) {
         if(!$date) {
             $date = date('ymd');
@@ -57,6 +70,39 @@ class NbpApi {
         return false;
     }
 
+    /**
+     * Checks last average exchange rates for given $currency_name and returns it as an array.
+     *
+     * @param $currency_name
+     * @return array
+     */
+    public function lastCurrencyValue($currency_name) {
+        $xml = file_get_contents($this->_urls['lastA']);
+        $this->json = $this->_parseXml($xml);
+        $arr = json_decode($this->json, true);
+
+        // Getting date of publication and exchange rate for that currency name.
+        $date = $arr['data_publikacji'];
+        $output = [$date => $this->getCurrency($currency_name)];
+
+        return $output;
+
+    }
+
+
+    public function lastCurrenciesValues($currencies_names) {
+        $xml = file_get_contents($this->_urls['lastA']);
+        $this->json = $this->_parseXml($xml);
+
+        return $this->getCurrencies($currencies_names);
+    }
+
+    /**
+     * Parse XML to JSON
+     *
+     * @param $xml_string
+     * @return string
+     */
     private function _parseXml($xml_string) {
         $xml = simplexml_load_string($xml_string);
         $json = json_encode($xml);
@@ -91,7 +137,7 @@ class NbpApi {
         if($this->_getXml($date)) {
             return $this->getCurrency($currency);
         }
-        return 'Brak kursu dla danego dnia.';
+        return 'There is no currency value for that specific day.';
     }
 
     /**
@@ -100,16 +146,25 @@ class NbpApi {
      */
     public function getCurrencies($currency_names) {
         $array = json_decode($this->json, true);
-        $output = array();
+        $date = $array['data_publikacji'];
+        $output = [$date => []];
 
+        $slugs = [];
         foreach($array['pozycja'] as $entry) {
-            $currency = $entry['kod_waluty'];
-
+            $currency = strtolower($entry['kod_waluty']);
+            $slugs[] = $currency;
             if(in_array($currency, $currency_names)) {
-                $output[$currency] = convert2Float($entry['kurs_sredni']);
+                $output[$date][$currency] = convert2Float($entry['kurs_sredni']);
             }
         }
+        print_r($slugs);
         return $output;
+    }
+
+    public function getCurrenciesForDate($currency_names, $date = null) {
+        if ($date === null) {
+
+        }
     }
     /*
      * Get list of currency values in period of time.
@@ -156,13 +211,5 @@ class NbpApi {
         }
 
         return $result;
-    }
-
-    public function run() {
-        $this->_getDir();
-        if($this->_getXml('150109')) {
-            var_dump($this->getCurrency('EUR'));
-            var_dump($this->getCurrencies(['EUR', 'USD']));
-        }
     }
 }

@@ -12,3 +12,9 @@ use NbpApi\NbpApi;
 
 $api = new NbpApi();
 var_dump($api->getCurrencyForRange('eur', '150715', '150720'));
+
+var_dump($api->getCurrencyForDate('eur', '150713'));
+
+var_dump($api->lastCurrencyValue('eur'));
+
+var_dump($api->lastCurrenciesValues(['eur', 'usd']));
