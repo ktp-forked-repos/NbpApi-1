@@ -11,4 +11,4 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use NbpApi\NbpApi;
 
 $api = new NbpApi();
-var_dump($api->getCurrencyForRange('EUR', '150820', '150825'));
+var_dump($api->getCurrencyForRange('eur', '150715', '150720'));

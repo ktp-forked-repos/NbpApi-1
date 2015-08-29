@@ -8,7 +8,13 @@ use InvalidArgumentException;
 function convert2Float($number) {
     return (float) preg_replace('/,/', '.', $number);
 }
-
+/*
+ * NbpApi is simple wrapper written in PHP to get data from NbpApi which can be found here:
+ * http://www.nbp.pl/home.aspx?f=/kursy/instrukcja_pobierania_kursow_walut.html
+ *
+ * @property    string  $dir
+ * @property    string  $json
+ */
 class NbpApi {
 
     public $dir;
@@ -57,17 +63,26 @@ class NbpApi {
         return $json;
     }
 
+    /**
+     * @param $currency_name
+     * @return float|null
+     */
     public function getCurrency($currency_name) {
         $array = json_decode($this->json, true);
 
         foreach($array['pozycja'] as $entry) {
-            if($entry['kod_waluty'] === $currency_name) {
+            if(strtolower($entry['kod_waluty']) === strtolower($currency_name)) {
                 return convert2Float($entry['kurs_sredni']);
             }
         }
-        return $array;
+        return null;
     }
 
+    /**
+     * @param string $currency
+     * @param null $date
+     * @return float|null|string
+     */
     public function getCurrencyForDate($currency = 'EUR', $date = null) {
         $this->_getDir();
         if($date === null) {
@@ -79,6 +94,10 @@ class NbpApi {
         return 'Brak kursu dla danego dnia.';
     }
 
+    /**
+     * @param $currency_names
+     * @return array
+     */
     public function getCurrencies($currency_names) {
         $array = json_decode($this->json, true);
         $output = array();
@@ -109,8 +128,8 @@ class NbpApi {
         $this->_getDir();
 
         try {
-            $from = Carbon::createFromFormat('ymd', $from);
-            $to = Carbon::createFromFormat('ymd', $to);
+            $from = Carbon::createFromFormat('ymd', $from)->second(0);
+            $to = Carbon::createFromFormat('ymd', $to)->second(0);
         }
         catch (InvalidArgumentException $e) {
             return "Unsupported date format passed.";
@@ -123,24 +142,19 @@ class NbpApi {
                 if(preg_match($pattern, $line, $matches)) {
 
                     // Get date from the file name
-                    $date = Carbon::createFromFormat('ymd', $matches[1]);
+                    $date = Carbon::createFromFormat('ymd', $matches[1] . '')->second(0);
 
                     // Check if date is in range we're looking for
-                    if($date->gte($from) and $date->lte($to)) {
-                        // Build url for xml file.
-                        $xml = $this->_urls['xml'] . trim($line) . '.xml';
-
-                        // Get xml file
-                        $xml = file_get_contents($xml);
-
-                        // Parse xml to json.
-                        $this->json = $this->_parseXml($xml);
+                    if($date->gte($from) && $date->lte($to)) {
+                        // Get the data for given day in range.
+                        $this->_getXml($date->format('ymd'));
                         $result[$date->format('Y-m-d')] = $this->getCurrency($currency_name);
                     }
 
                 }
             }
         }
+
         return $result;
     }
 
