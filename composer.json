@@ -1,0 +1,20 @@
+{
+  "name": "matthewgrzegorczyk/nbp-api",
+  "description": "PHP Wrapper of Nbp Api",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Matthew Grzegorczyk",
+      "email": "matthewgrzegorczyk@gmail.com"
+    }
+  ],
+  "require": {
+    "nesbot/carbon": "^1.20"
+  },
+  "autoload": {
+	"psr-0": {
+		"NbpApi": "src"
+	}
+  }
+}
